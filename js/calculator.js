@@ -7,7 +7,7 @@
 // Fuente: paginas oficiales de cada exchange (julio 2024)
 
 const PLATFORM_FEES = {
-  binance_p2p:   { name: 'Binance P2P',   fee: 0,    note: 'Maker: 0% comision' },
+  binance_p2p:   { name: 'Binance P2P',   fee: 0.2,  note: 'Maker: 0.2%' },
   okx_p2p:       { name: 'OKX P2P',       fee: 0,    note: 'Maker: 0% comision' },
   bybit_p2p:     { name: 'Bybit P2P',     fee: 0,    note: 'Maker: 0% comision' },
   kucoin_p2p:    { name: 'KuCoin P2P',    fee: 0,    note: 'Maker: 0% comision' },
