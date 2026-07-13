@@ -6,8 +6,7 @@
   <meta name="theme-color" content="#0A0A0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Calculadora de arbitraje crypto en ARS">
-  <title>Calculadora Arbitraje ARS</title>
+  <title>Calculadora Arbitraje</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="stylesheet" href="css/style.css">
@@ -15,101 +14,29 @@
 <body>
   <div id="app">
 
-    <!-- Header -->
     <header class="header">
       <h1 class="logo">Calculadora<span class="logo-accent">Arbitraje</span></h1>
     </header>
 
-    <!-- Capital inicial -->
+    <!-- Capital -->
     <section class="section">
-      <h2 class="section-title">Capital Inicial</h2>
       <div class="input-row">
         <div class="input-group full">
-          <label>Monto a invertir (ARS)</label>
-          <input type="number" id="capital" value="1000000" min="0" step="1" inputmode="decimal">
+          <label>Capital (ARS)</label>
+          <input type="number" id="capital" value="1000000" inputmode="decimal">
         </div>
       </div>
     </section>
 
-    <!-- PASO 1: Compra P2P (ARS → Crypto) -->
+    <!-- Compra -->
     <section class="section">
-      <h2 class="section-title">1. Compra (ARS → Crypto)</h2>
+      <h2 class="section-title">1. Compra</h2>
       <div class="input-row">
         <div class="input-group flex1">
           <label>Plataforma</label>
-          <select id="buyPlatform">
-            <option value="binance_p2p" selected>Binance P2P</option>
-            <option value="binance_spot">Binance Spot</option>
-            <option value="okx_p2p">OKX P2P</option>
-            <option value="okx_spot">OKX Spot</option>
-            <option value="bybit_p2p">Bybit P2P</option>
-            <option value="kucoin_p2p">KuCoin P2P</option>
-            <option value="bitget_p2p">Bitget P2P</option>
-            <option value="lemon">Lemon Cash</option>
-            <option value="belo">Belo</option>
-            <option value="buenbit">Buenbit</option>
-            <option value="ripio">Ripio</option>
-            <option value="fiwind">Fiwind</option>
-            <option value="tiendacrypto">TiendaCrypto</option>
-            <option value="otro">Otro</option>
-          </select>
-        </div>
-        <div class="input-group flex1">
-          <label>Crypto / Par</label>
-          <input type="text" id="buyPair" value="USDT/ARS" placeholder="USDT/ARS">
-        </div>
-      </div>
-      <div class="input-row">
-        <div class="input-group flex1">
-          <label>Precio compra (ARS por unidad)</label>
-          <input type="number" id="buyPrice" placeholder="1250" min="0" step="any" inputmode="decimal">
-        </div>
-        <div class="input-group flex1">
-          <label>Comision exchange (%)</label>
-          <input type="number" id="buyFeeExchange" value="0" min="0" step="0.01" inputmode="decimal">
-        </div>
-      </div>
-      <div class="p2p-fees-section">
-        <div class="p2p-label">Costos P2P</div>
-        <div class="input-row">
-          <div class="input-group flex1">
-            <label>Spread P2P / markup (%)</label>
-            <input type="number" id="buyP2pSpread" value="0.5" min="0" step="0.1" inputmode="decimal">
-          </div>
-          <div class="input-group flex1">
-            <label>Fee transferencia banco (ARS)</label>
-            <input type="number" id="buyBankFee" value="0" min="0" step="1" inputmode="decimal">
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- PASO 2: Transferencia on-chain -->
-    <section class="section">
-      <h2 class="section-title">2. Transferencia on-chain</h2>
-      <div class="input-row">
-        <div class="input-group flex1">
-          <label>Fee de retiro (en crypto)</label>
-          <input type="number" id="withdrawFee" value="1" min="0" step="0.01" inputmode="decimal">
-        </div>
-        <div class="input-group flex1">
-          <label>Red / Nota</label>
-          <input type="text" id="networkNote" value="TRC20" placeholder="TRC20, ERC20, BEP20...">
-        </div>
-      </div>
-    </section>
-
-    <!-- PASO 3: Venta (Crypto → ARS u otra moneda) -->
-    <section class="section">
-      <h2 class="section-title">3. Venta (Crypto → ARS)</h2>
-      <div class="input-row">
-        <div class="input-group flex1">
-          <label>Plataforma</label>
-          <select id="sellPlatform">
-            <option value="okx_p2p" selected>OKX P2P</option>
-            <option value="okx_spot">OKX Spot</option>
+          <select id="buyPlatform" onchange="onPlatformChange()">
             <option value="binance_p2p">Binance P2P</option>
-            <option value="binance_spot">Binance Spot</option>
+            <option value="okx_p2p">OKX P2P</option>
             <option value="bybit_p2p">Bybit P2P</option>
             <option value="kucoin_p2p">KuCoin P2P</option>
             <option value="bitget_p2p">Bitget P2P</option>
@@ -119,54 +46,84 @@
             <option value="ripio">Ripio</option>
             <option value="fiwind">Fiwind</option>
             <option value="tiendacrypto">TiendaCrypto</option>
-            <option value="otro">Otro</option>
           </select>
         </div>
         <div class="input-group flex1">
-          <label>Precio venta (ARS por unidad)</label>
-          <input type="number" id="sellPrice" placeholder="1280" min="0" step="any" inputmode="decimal">
+          <label>Precio compra (ARS)</label>
+          <input type="number" id="buyPrice" placeholder="1250" inputmode="decimal">
         </div>
       </div>
+      <div class="fee-auto" id="buyFeeInfo"></div>
+    </section>
+
+    <!-- Transferencia -->
+    <section class="section">
+      <h2 class="section-title">2. Envio</h2>
       <div class="input-row">
         <div class="input-group flex1">
-          <label>Comision exchange (%)</label>
-          <input type="number" id="sellFeeExchange" value="0" min="0" step="0.01" inputmode="decimal">
+          <label>Red</label>
+          <select id="network" onchange="onNetworkChange()">
+            <option value="trc20">TRC20 (USDT)</option>
+            <option value="bep20">BEP20 (BSC)</option>
+            <option value="polygon">Polygon</option>
+            <option value="solana">Solana</option>
+            <option value="ton">TON</option>
+            <option value="arbitrum">Arbitrum</option>
+            <option value="erc20">ERC20 (caro)</option>
+          </select>
         </div>
-      </div>
-      <div class="p2p-fees-section">
-        <div class="p2p-label">Costos P2P</div>
-        <div class="input-row">
-          <div class="input-group flex1">
-            <label>Spread P2P / markup (%)</label>
-            <input type="number" id="sellP2pSpread" value="0.5" min="0" step="0.1" inputmode="decimal">
-          </div>
-          <div class="input-group flex1">
-            <label>Fee transferencia banco (ARS)</label>
-            <input type="number" id="sellBankFee" value="0" min="0" step="1" inputmode="decimal">
-          </div>
+        <div class="input-group flex1">
+          <label>Fee retiro (crypto)</label>
+          <input type="number" id="withdrawFee" value="1" inputmode="decimal">
         </div>
       </div>
     </section>
 
-    <!-- PASO 4: Recompra (circuito completo) -->
+    <!-- Venta -->
     <section class="section">
-      <h2 class="section-title">4. Recompra (volver al activo original)</h2>
+      <h2 class="section-title">3. Venta</h2>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Plataforma</label>
+          <select id="sellPlatform" onchange="onPlatformChange()">
+            <option value="okx_p2p" selected>OKX P2P</option>
+            <option value="binance_p2p">Binance P2P</option>
+            <option value="bybit_p2p">Bybit P2P</option>
+            <option value="kucoin_p2p">KuCoin P2P</option>
+            <option value="bitget_p2p">Bitget P2P</option>
+            <option value="lemon">Lemon Cash</option>
+            <option value="belo">Belo</option>
+            <option value="buenbit">Buenbit</option>
+            <option value="ripio">Ripio</option>
+            <option value="fiwind">Fiwind</option>
+            <option value="tiendacrypto">TiendaCrypto</option>
+          </select>
+        </div>
+        <div class="input-group flex1">
+          <label>Precio venta (ARS)</label>
+          <input type="number" id="sellPrice" placeholder="1280" inputmode="decimal">
+        </div>
+      </div>
+      <div class="fee-auto" id="sellFeeInfo"></div>
+    </section>
+
+    <!-- Recompra toggle -->
+    <section class="section">
       <div class="toggle-row">
-        <label class="toggle-label">Incluir recompra en el calculo</label>
+        <label class="toggle-label">Incluir recompra (circuito completo)</label>
         <label class="switch">
           <input type="checkbox" id="includeRebuy">
           <span class="slider"></span>
         </label>
       </div>
       <div id="rebuySection" style="display:none;">
+        <h2 class="section-title">4. Recompra</h2>
         <div class="input-row">
           <div class="input-group flex1">
-            <label>Plataforma recompra</label>
-            <select id="rebuyPlatform">
-              <option value="binance_p2p" selected>Binance P2P</option>
-              <option value="binance_spot">Binance Spot</option>
+            <label>Plataforma</label>
+            <select id="rebuyPlatform" onchange="onPlatformChange()">
+              <option value="binance_p2p">Binance P2P</option>
               <option value="okx_p2p">OKX P2P</option>
-              <option value="okx_spot">OKX Spot</option>
               <option value="bybit_p2p">Bybit P2P</option>
               <option value="kucoin_p2p">KuCoin P2P</option>
               <option value="bitget_p2p">Bitget P2P</option>
@@ -176,46 +133,21 @@
               <option value="ripio">Ripio</option>
               <option value="fiwind">Fiwind</option>
               <option value="tiendacrypto">TiendaCrypto</option>
-              <option value="otro">Otro</option>
             </select>
           </div>
           <div class="input-group flex1">
             <label>Precio recompra (ARS)</label>
-            <input type="number" id="rebuyPrice" placeholder="1250" min="0" step="any" inputmode="decimal">
+            <input type="number" id="rebuyPrice" placeholder="1250" inputmode="decimal">
           </div>
         </div>
-        <div class="input-row">
-          <div class="input-group flex1">
-            <label>Comision recompra (%)</label>
-            <input type="number" id="rebuyFee" value="0" min="0" step="0.01" inputmode="decimal">
-          </div>
-          <div class="input-group flex1">
-            <label>Fee retorno on-chain (crypto)</label>
-            <input type="number" id="returnFee" value="1" min="0" step="0.01" inputmode="decimal">
-          </div>
-        </div>
-        <div class="p2p-fees-section">
-          <div class="p2p-label">Costos P2P recompra</div>
-          <div class="input-row">
-            <div class="input-group flex1">
-              <label>Spread P2P (%)</label>
-              <input type="number" id="rebuyP2pSpread" value="0.5" min="0" step="0.1" inputmode="decimal">
-            </div>
-            <div class="input-group flex1">
-              <label>Fee banco (ARS)</label>
-              <input type="number" id="rebuyBankFee" value="0" min="0" step="1" inputmode="decimal">
-            </div>
-          </div>
-        </div>
+        <div class="fee-auto" id="rebuyFeeInfo"></div>
       </div>
     </section>
 
-    <!-- Boton calcular -->
-    <button class="calc-btn" onclick="calculate()">Calcular Arbitraje</button>
+    <button class="calc-btn" onclick="calculate()">Calcular</button>
 
-    <!-- Resultados -->
-    <section class="results-section" id="resultsSection" style="display:none;">
-      <h2 class="section-title">Resultado</h2>
+    <!-- Resultado -->
+    <section id="resultsSection" style="display:none;">
       <div class="result-summary" id="resultSummary">
         <div class="result-main" id="resultMain"></div>
         <div class="result-percent" id="resultPercent"></div>
@@ -226,13 +158,12 @@
 
     <!-- Historial -->
     <section class="section" id="historySection" style="display:none;">
-      <h2 class="section-title">Historial de Calculos</h2>
+      <h2 class="section-title">Historial</h2>
       <div id="historyList"></div>
-      <button class="clear-btn" onclick="clearHist()">Borrar Historial</button>
+      <button class="clear-btn" onclick="clearHist()">Borrar</button>
     </section>
 
   </div>
-
   <script src="js/calculator.js"></script>
 </body>
 </html>

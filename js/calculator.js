@@ -1,301 +1,269 @@
 /**
- * Calculadora de Arbitraje - ARS + P2P
- * Circuito: ARS → Crypto (Binance) → Transfer → Crypto (OKX) → ARS
+ * Calculadora de Arbitraje ARS
+ * Comisiones automaticas por plataforma
  */
+
+// ═══ COMISIONES AUTOMATICAS ══════════════════════════
+// Fuente: paginas oficiales de cada exchange (julio 2024)
+
+const PLATFORM_FEES = {
+  binance_p2p:   { name: 'Binance P2P',   maker: 0, taker: 0, spread: 0.3, note: 'Sin comision maker/taker, spread ~0.3%' },
+  okx_p2p:       { name: 'OKX P2P',       maker: 0, taker: 0, spread: 0.3, note: 'Sin comision, spread ~0.3%' },
+  bybit_p2p:     { name: 'Bybit P2P',     maker: 0, taker: 0, spread: 0.4, note: 'Sin comision, spread ~0.4%' },
+  kucoin_p2p:    { name: 'KuCoin P2P',    maker: 0, taker: 0, spread: 0.5, note: 'Sin comision, spread ~0.5%' },
+  bitget_p2p:    { name: 'Bitget P2P',    maker: 0, taker: 0, spread: 0.4, note: 'Sin comision, spread ~0.4%' },
+  lemon:         { name: 'Lemon Cash',    maker: 0, taker: 0, spread: 1.5, note: 'Spread incluido en precio ~1.5%' },
+  belo:          { name: 'Belo',          maker: 0, taker: 0, spread: 1.2, note: 'Spread incluido ~1.2%' },
+  buenbit:       { name: 'Buenbit',       maker: 0.5, taker: 0.5, spread: 0.8, note: '0.5% comision + spread ~0.8%' },
+  ripio:         { name: 'Ripio',         maker: 0, taker: 0, spread: 2.0, note: 'Spread incluido ~2%' },
+  fiwind:        { name: 'Fiwind',        maker: 0, taker: 0, spread: 0.8, note: 'Spread ~0.8%' },
+  tiendacrypto:  { name: 'TiendaCrypto',  maker: 0, taker: 0.6, spread: 0.5, note: '0.6% + spread ~0.5%' },
+};
+
+// Fees de retiro por red (en USDT equivalente)
+const NETWORK_FEES = {
+  trc20:    { fee: 1, name: 'TRC20 (Tron)' },
+  bep20:    { fee: 0.3, name: 'BEP20 (BSC)' },
+  polygon:  { fee: 0.1, name: 'Polygon' },
+  solana:   { fee: 0.1, name: 'Solana' },
+  ton:      { fee: 0.1, name: 'TON' },
+  arbitrum: { fee: 0.5, name: 'Arbitrum' },
+  erc20:    { fee: 15, name: 'ERC20 (Ethereum)' },
+};
 
 let calcHistory = [];
 
-// Toggle rebuy section
-document.getElementById('includeRebuy').addEventListener('change', function() {
-  document.getElementById('rebuySection').style.display = this.checked ? 'block' : 'none';
-});
+// ═══ INIT ════════════════════════════════════════════
 
-// Load history on start
 (function init() {
+  document.getElementById('includeRebuy').addEventListener('change', function() {
+    document.getElementById('rebuySection').style.display = this.checked ? 'block' : 'none';
+  });
   try {
     const saved = localStorage.getItem('arb_calc_history');
     if (saved) calcHistory = JSON.parse(saved);
     renderHistory();
   } catch {}
+  onPlatformChange();
+  onNetworkChange();
 })();
 
-// ═══ CALCULO PRINCIPAL ═══════════════════════════════
+// ═══ AUTO-FILL FEES ══════════════════════════════════
+
+function onPlatformChange() {
+  showFeeInfo('buyPlatform', 'buyFeeInfo');
+  showFeeInfo('sellPlatform', 'sellFeeInfo');
+  showFeeInfo('rebuyPlatform', 'rebuyFeeInfo');
+}
+
+function showFeeInfo(selectId, infoId) {
+  const el = document.getElementById(infoId);
+  if (!el) return;
+  const platform = document.getElementById(selectId).value;
+  const fees = PLATFORM_FEES[platform];
+  if (!fees) { el.innerHTML = ''; return; }
+
+  const totalFee = fees.maker + fees.taker + fees.spread;
+  el.innerHTML = `<span class="fee-tag">${totalFee.toFixed(1)}% total</span> ${fees.note}`;
+}
+
+function onNetworkChange() {
+  const network = document.getElementById('network').value;
+  const info = NETWORK_FEES[network];
+  if (info) {
+    document.getElementById('withdrawFee').value = info.fee;
+  }
+}
+
+function getPlatformTotalFee(platformId) {
+  const p = PLATFORM_FEES[platformId];
+  if (!p) return 0;
+  return p.maker + p.taker + p.spread;
+}
+
+// ═══ CALCULO ═════════════════════════════════════════
 
 function calculate() {
-  // Capital
   const capital = parseFloat(document.getElementById('capital').value) || 0;
-
-  // Compra
   const buyPrice = parseFloat(document.getElementById('buyPrice').value) || 0;
-  const buyFeeExchange = parseFloat(document.getElementById('buyFeeExchange').value) || 0;
-  const buyP2pSpread = parseFloat(document.getElementById('buyP2pSpread').value) || 0;
-  const buyBankFee = parseFloat(document.getElementById('buyBankFee').value) || 0;
-
-  // Transferencia
-  const withdrawFee = parseFloat(document.getElementById('withdrawFee').value) || 0;
-
-  // Venta
   const sellPrice = parseFloat(document.getElementById('sellPrice').value) || 0;
-  const sellFeeExchange = parseFloat(document.getElementById('sellFeeExchange').value) || 0;
-  const sellP2pSpread = parseFloat(document.getElementById('sellP2pSpread').value) || 0;
-  const sellBankFee = parseFloat(document.getElementById('sellBankFee').value) || 0;
-
-  // Recompra
+  const withdrawFee = parseFloat(document.getElementById('withdrawFee').value) || 0;
   const includeRebuy = document.getElementById('includeRebuy').checked;
   const rebuyPrice = parseFloat(document.getElementById('rebuyPrice').value) || 0;
-  const rebuyFee = parseFloat(document.getElementById('rebuyFee').value) || 0;
-  const returnFee = parseFloat(document.getElementById('returnFee').value) || 0;
-  const rebuyP2pSpread = parseFloat(document.getElementById('rebuyP2pSpread').value) || 0;
-  const rebuyBankFee = parseFloat(document.getElementById('rebuyBankFee').value) || 0;
 
-  // Platforms
   const buyPlatform = document.getElementById('buyPlatform').value;
   const sellPlatform = document.getElementById('sellPlatform').value;
   const rebuyPlatform = document.getElementById('rebuyPlatform').value;
-  const pair = document.getElementById('buyPair').value || 'USDT/ARS';
 
   if (!capital || !buyPrice || !sellPrice) {
-    alert('Completa al menos: Capital, Precio de compra y Precio de venta');
+    alert('Completa: Capital, Precio compra y Precio venta');
     return;
   }
 
-  // ═══ PASO 1: COMPRA (ARS → Crypto) ═══
-  // Precio efectivo = precio publicado + spread P2P
-  const buyPriceEffective = buyPrice * (1 + buyP2pSpread / 100);
-  const capitalAfterBankFee = capital - buyBankFee;
-  const buyFeeArs = capitalAfterBankFee * (buyFeeExchange / 100);
-  const arsForCrypto = capitalAfterBankFee - buyFeeArs;
-  const cryptoBought = arsForCrypto / buyPriceEffective;
+  // Fees automaticas
+  const buyFeeTotal = getPlatformTotalFee(buyPlatform);
+  const sellFeeTotal = getPlatformTotalFee(sellPlatform);
+  const rebuyFeeTotal = getPlatformTotalFee(rebuyPlatform);
 
-  // ═══ PASO 2: TRANSFERENCIA ═══
-  const cryptoAfterWithdraw = cryptoBought - withdrawFee;
+  // ═══ PASO 1: COMPRA ═══
+  const buyFeeCost = capital * (buyFeeTotal / 100);
+  const arsNeto = capital - buyFeeCost;
+  const cryptoBought = arsNeto / buyPrice;
 
-  // ═══ PASO 3: VENTA (Crypto → ARS) ═══
-  // Precio efectivo de venta = precio publicado - spread P2P
-  const sellPriceEffective = sellPrice * (1 - sellP2pSpread / 100);
-  const grossSellArs = cryptoAfterWithdraw * sellPriceEffective;
-  const sellFeeArs = grossSellArs * (sellFeeExchange / 100);
-  const netSellArs = grossSellArs - sellFeeArs - sellBankFee;
+  // ═══ PASO 2: ENVIO ═══
+  const cryptoAfterSend = cryptoBought - withdrawFee;
+  const sendCostArs = withdrawFee * buyPrice;
 
-  // Costos totales paso 1-3
-  const buySpreadCostArs = (buyPriceEffective - buyPrice) * cryptoBought;
-  const sellSpreadCostArs = (sellPrice - sellPriceEffective) * cryptoAfterWithdraw;
-  const withdrawFeeCostArs = withdrawFee * sellPriceEffective;
+  // ═══ PASO 3: VENTA ═══
+  const grossSell = cryptoAfterSend * sellPrice;
+  const sellFeeCost = grossSell * (sellFeeTotal / 100);
+  const netSell = grossSell - sellFeeCost;
 
   const steps = [];
-
   steps.push({
-    num: 1, label: 'Compra P2P',
-    value: `${cryptoBought.toFixed(4)} ${pair.split('/')[0]}`,
-    detail: `en ${pName(buyPlatform)} a $${buyPriceEffective.toLocaleString('es-AR', {maximumFractionDigits:2})} ARS`,
-    amount: `-$${(buyFeeArs + buyBankFee + buySpreadCostArs).toFixed(0)} costos`,
-    amountClass: 'color-red'
+    n: 1, label: 'Compra',
+    val: `${cryptoBought.toFixed(2)} USDT`,
+    sub: `${pName(buyPlatform)} · $${fmt(buyPrice)}/u`,
+    cost: `-$${fmt(buyFeeCost)} (${buyFeeTotal}%)`
+  });
+  steps.push({
+    n: 2, label: 'Envio',
+    val: `${cryptoAfterSend.toFixed(2)} USDT`,
+    sub: `${NETWORK_FEES[document.getElementById('network').value]?.name || 'Red'}`,
+    cost: `-${withdrawFee} USDT`
+  });
+  steps.push({
+    n: 3, label: 'Venta',
+    val: `$${fmt(netSell)} ARS`,
+    sub: `${pName(sellPlatform)} · $${fmt(sellPrice)}/u`,
+    cost: `-$${fmt(sellFeeCost)} (${sellFeeTotal}%)`
   });
 
-  steps.push({
-    num: 2, label: 'Envio on-chain',
-    value: `${cryptoAfterWithdraw.toFixed(4)} ${pair.split('/')[0]}`,
-    detail: `Red: ${document.getElementById('networkNote').value || 'TRC20'} → ${pName(sellPlatform)}`,
-    amount: `-${withdrawFee} ${pair.split('/')[0]}`,
-    amountClass: 'color-red'
-  });
-
-  steps.push({
-    num: 3, label: 'Venta P2P',
-    value: `$${netSellArs.toLocaleString('es-AR', {maximumFractionDigits:0})} ARS`,
-    detail: `en ${pName(sellPlatform)} a $${sellPriceEffective.toLocaleString('es-AR', {maximumFractionDigits:2})} ARS`,
-    amount: `-$${(sellFeeArs + sellBankFee + sellSpreadCostArs).toFixed(0)} costos`,
-    amountClass: 'color-red'
-  });
-
-  let finalArs, netProfit, netProfitPercent, totalCosts;
-  let rebuyFeeArs = 0, returnFeeArs = 0, rebuySpreadCostArs = 0;
-  let cryptoFinal = 0, cryptoDiff = 0;
+  let netProfit, totalCosts;
+  let cryptoEnd = 0, cryptoDiff = 0;
 
   if (includeRebuy && rebuyPrice > 0) {
-    // ═══ PASO 4: RECOMPRA (ARS → Crypto de nuevo) ═══
-    const rebuyPriceEffective = rebuyPrice * (1 + rebuyP2pSpread / 100);
-    const arsForRebuy = netSellArs - rebuyBankFee;
-    rebuyFeeArs = arsForRebuy * (rebuyFee / 100);
-    const arsAfterRebuyFee = arsForRebuy - rebuyFeeArs;
-    cryptoFinal = arsAfterRebuyFee / rebuyPriceEffective;
+    // ═══ PASO 4: RECOMPRA ═══
+    const rebuyFeeCost = netSell * (rebuyFeeTotal / 100);
+    const arsForRebuy = netSell - rebuyFeeCost;
+    const cryptoRebought = arsForRebuy / rebuyPrice;
 
-    // ═══ PASO 5: RETORNO (enviar crypto de vuelta) ═══
-    const cryptoFinalAfterReturn = cryptoFinal - returnFee;
-    returnFeeArs = returnFee * rebuyPriceEffective;
-    rebuySpreadCostArs = (rebuyPriceEffective - rebuyPrice) * cryptoFinal;
+    // ═══ PASO 5: RETORNO ═══
+    const cryptoFinal = cryptoRebought - withdrawFee;
+    const returnCostArs = withdrawFee * rebuyPrice;
 
     steps.push({
-      num: 4, label: 'Recompra P2P',
-      value: `${cryptoFinal.toFixed(4)} ${pair.split('/')[0]}`,
-      detail: `en ${pName(rebuyPlatform)} a $${rebuyPriceEffective.toLocaleString('es-AR', {maximumFractionDigits:2})} ARS`,
-      amount: `-$${(rebuyFeeArs + rebuyBankFee + rebuySpreadCostArs).toFixed(0)} costos`,
-      amountClass: 'color-red'
+      n: 4, label: 'Recompra',
+      val: `${cryptoRebought.toFixed(2)} USDT`,
+      sub: `${pName(rebuyPlatform)} · $${fmt(rebuyPrice)}/u`,
+      cost: `-$${fmt(rebuyFeeCost)} (${rebuyFeeTotal}%)`
     });
-
     steps.push({
-      num: 5, label: 'Retorno on-chain',
-      value: `${cryptoFinalAfterReturn.toFixed(4)} ${pair.split('/')[0]}`,
-      detail: `De vuelta en ${pName(buyPlatform)}`,
-      amount: `-${returnFee} ${pair.split('/')[0]}`,
-      amountClass: 'color-red'
+      n: 5, label: 'Retorno',
+      val: `${cryptoFinal.toFixed(2)} USDT`,
+      sub: `De vuelta en ${pName(buyPlatform)}`,
+      cost: `-${withdrawFee} USDT`
     });
 
-    cryptoDiff = cryptoFinalAfterReturn - cryptoBought;
-    // Valor final en ARS (al precio original de compra)
-    finalArs = cryptoFinalAfterReturn * buyPrice;
-    netProfit = finalArs - capital;
-    netProfitPercent = (netProfit / capital) * 100;
+    cryptoEnd = cryptoFinal;
+    cryptoDiff = cryptoFinal - cryptoBought;
+    const finalValueArs = cryptoFinal * buyPrice;
+    netProfit = finalValueArs - capital;
+    totalCosts = buyFeeCost + sendCostArs + sellFeeCost + rebuyFeeCost + returnCostArs;
 
-    totalCosts = buyFeeArs + buyBankFee + buySpreadCostArs +
-                 withdrawFeeCostArs +
-                 sellFeeArs + sellBankFee + sellSpreadCostArs +
-                 rebuyFeeArs + rebuyBankFee + rebuySpreadCostArs +
-                 returnFeeArs;
-
-    showResults(netProfit, netProfitPercent, steps, {
-      capital, buyFeeArs, buyBankFee, buySpreadCostArs,
-      withdrawFeeCostArs, sellFeeArs, sellBankFee, sellSpreadCostArs,
-      rebuyFeeArs, rebuyBankFee: rebuyBankFee, rebuySpreadCostArs,
-      returnFeeArs, totalCosts,
-      cryptoStart: cryptoBought, cryptoEnd: cryptoFinalAfterReturn, cryptoDiff,
-      pair, includeRebuy: true
+    showResults(netProfit, (netProfit / capital) * 100, steps, {
+      capital, buyFeeCost, sendCostArs, sellFeeCost,
+      rebuyFeeCost, returnCostArs, totalCosts,
+      cryptoStart: cryptoBought, cryptoEnd, cryptoDiff,
+      includeRebuy: true
     });
   } else {
-    // Sin recompra: ganancia directa en ARS
-    finalArs = netSellArs;
-    netProfit = netSellArs - capital;
-    netProfitPercent = (netProfit / capital) * 100;
+    netProfit = netSell - capital;
+    totalCosts = buyFeeCost + sendCostArs + sellFeeCost;
 
-    totalCosts = buyFeeArs + buyBankFee + buySpreadCostArs +
-                 withdrawFeeCostArs +
-                 sellFeeArs + sellBankFee + sellSpreadCostArs;
-
-    showResults(netProfit, netProfitPercent, steps, {
-      capital, buyFeeArs, buyBankFee, buySpreadCostArs,
-      withdrawFeeCostArs, sellFeeArs, sellBankFee, sellSpreadCostArs,
-      rebuyFeeArs: 0, rebuyBankFee: 0, rebuySpreadCostArs: 0,
-      returnFeeArs: 0, totalCosts,
-      pair, includeRebuy: false
+    showResults(netProfit, (netProfit / capital) * 100, steps, {
+      capital, buyFeeCost, sendCostArs, sellFeeCost,
+      rebuyFeeCost: 0, returnCostArs: 0, totalCosts,
+      includeRebuy: false
     });
   }
 
-  // Save to history
-  saveToHistory(pair, buyPlatform, sellPlatform, capital, netProfit, netProfitPercent);
+  saveToHistory(buyPlatform, sellPlatform, capital, netProfit, (netProfit / capital) * 100);
 }
 
-// ═══ MOSTRAR RESULTADOS ══════════════════════════════
+// ═══ RESULTADOS ══════════════════════════════════════
 
-function showResults(netProfit, netProfitPercent, steps, data) {
+function showResults(netProfit, percent, steps, data) {
   document.getElementById('resultsSection').style.display = 'block';
+  setTimeout(() => document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' }), 100);
 
-  setTimeout(() => {
-    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
-  }, 100);
+  const pos = netProfit >= 0;
+  const color = pos ? 'var(--success)' : 'var(--danger)';
+  const cls = pos ? 'positive' : 'negative';
 
-  const isPositive = netProfit >= 0;
-  const summary = document.getElementById('resultSummary');
-  summary.className = `result-summary ${isPositive ? 'positive' : 'negative'}`;
-
-  const color = isPositive ? 'var(--success)' : 'var(--danger)';
-  document.getElementById('resultMain').innerHTML =
-    `<span style="color:${color}">${isPositive ? '+' : ''}$${Math.abs(netProfit).toLocaleString('es-AR', {maximumFractionDigits:0})} ARS</span>`;
-  document.getElementById('resultPercent').innerHTML =
-    `<span style="color:${color}">${isPositive ? '+' : ''}${netProfitPercent.toFixed(3)}% sobre capital</span>`;
+  document.getElementById('resultSummary').className = `result-summary ${cls}`;
+  document.getElementById('resultMain').innerHTML = `<span style="color:${color}">${pos ? '+' : '-'}$${fmt(Math.abs(netProfit))} ARS</span>`;
+  document.getElementById('resultPercent').innerHTML = `<span style="color:${color}">${pos ? '+' : ''}${percent.toFixed(2)}%</span>`;
 
   // Circuit
   document.getElementById('circuit').innerHTML = steps.map(s => `
     <div class="circuit-step">
-      <div class="step-num">${s.num}</div>
+      <div class="step-num">${s.n}</div>
       <div class="step-info">
-        <div class="step-label">${s.label}</div>
-        <div class="step-value">${s.value}</div>
-        <div class="step-detail">${s.detail}</div>
+        <div class="step-value">${s.label}: ${s.val}</div>
+        <div class="step-detail">${s.sub}</div>
       </div>
-      <div class="step-amount ${s.amountClass}">${s.amount}</div>
-    </div>
-  `).join('');
+      <div class="step-amount color-red">${s.cost}</div>
+    </div>`).join('');
 
   // Breakdown
-  let html = `<div class="breakdown-title">Desglose de Costos (ARS)</div>`;
-  html += bRow('Capital invertido', `$${data.capital.toLocaleString('es-AR', {maximumFractionDigits:0})}`);
-  html += bDiv();
-  html += bRow('Comision compra (exchange)', `-$${data.buyFeeArs.toFixed(0)}`, 'color-red');
-  html += bRow('Spread P2P compra', `-$${data.buySpreadCostArs.toFixed(0)}`, 'color-red');
-  html += bRow('Fee banco compra', `-$${data.buyBankFee.toFixed(0)}`, 'color-red');
-  html += bRow('Fee retiro on-chain', `-$${data.withdrawFeeCostArs.toFixed(0)}`, 'color-red');
-  html += bRow('Comision venta (exchange)', `-$${data.sellFeeArs.toFixed(0)}`, 'color-red');
-  html += bRow('Spread P2P venta', `-$${data.sellSpreadCostArs.toFixed(0)}`, 'color-red');
-  html += bRow('Fee banco venta', `-$${data.sellBankFee.toFixed(0)}`, 'color-red');
-
+  let h = `<div class="breakdown-title">Costos</div>`;
+  h += bR('Comision compra', `-$${fmt(data.buyFeeCost)}`);
+  h += bR('Fee envio', `-$${fmt(data.sendCostArs)}`);
+  h += bR('Comision venta', `-$${fmt(data.sellFeeCost)}`);
   if (data.includeRebuy) {
-    html += bRow('Comision recompra', `-$${data.rebuyFeeArs.toFixed(0)}`, 'color-red');
-    html += bRow('Spread P2P recompra', `-$${data.rebuySpreadCostArs.toFixed(0)}`, 'color-red');
-    html += bRow('Fee banco recompra', `-$${data.rebuyBankFee.toFixed(0)}`, 'color-red');
-    html += bRow('Fee retorno on-chain', `-$${data.returnFeeArs.toFixed(0)}`, 'color-red');
+    h += bR('Comision recompra', `-$${fmt(data.rebuyFeeCost)}`);
+    h += bR('Fee retorno', `-$${fmt(data.returnCostArs)}`);
   }
-
-  html += bDiv();
-  html += bRow('Total costos', `-$${data.totalCosts.toLocaleString('es-AR', {maximumFractionDigits:0})}`, 'color-red');
-
+  h += `<div class="breakdown-divider"></div>`;
+  h += bR('Total costos', `-$${fmt(data.totalCosts)}`, 'color-red');
   if (data.includeRebuy) {
-    html += bDiv();
-    html += bRow('Crypto comprado', `${data.cryptoStart.toFixed(4)}`);
-    html += bRow('Crypto final', `${data.cryptoEnd.toFixed(4)}`);
-    html += bRow('Diferencia crypto', `${data.cryptoDiff >= 0 ? '+' : ''}${data.cryptoDiff.toFixed(4)}`,
-      data.cryptoDiff >= 0 ? 'color-green' : 'color-red');
+    h += `<div class="breakdown-divider"></div>`;
+    h += bR('USDT inicio', data.cryptoStart.toFixed(2));
+    h += bR('USDT final', data.cryptoEnd.toFixed(2));
+    h += bR('Diferencia', `${data.cryptoDiff >= 0 ? '+' : ''}${data.cryptoDiff.toFixed(2)}`, data.cryptoDiff >= 0 ? 'color-green' : 'color-red');
   }
-
-  html += bDiv();
-  html += `<div class="breakdown-row total"><span class="label">GANANCIA NETA</span>` +
-    `<span class="value ${isPositive ? 'color-green' : 'color-red'}">` +
-    `${isPositive ? '+' : ''}$${Math.abs(netProfit).toLocaleString('es-AR', {maximumFractionDigits:0})} ARS</span></div>`;
-
-  document.getElementById('breakdown').innerHTML = html;
+  h += `<div class="breakdown-divider"></div>`;
+  h += `<div class="breakdown-row total"><span class="label">NETO</span><span class="value ${pos ? 'color-green' : 'color-red'}">${pos ? '+' : '-'}$${fmt(Math.abs(netProfit))}</span></div>`;
+  document.getElementById('breakdown').innerHTML = h;
 }
 
-function bRow(label, value, cls) {
-  return `<div class="breakdown-row"><span class="label">${label}</span><span class="value ${cls || ''}">${value}</span></div>`;
-}
-function bDiv() {
-  return `<div class="breakdown-divider"></div>`;
-}
+function bR(l, v, c) { return `<div class="breakdown-row"><span class="label">${l}</span><span class="value ${c || ''}">${v}</span></div>`; }
 
 // ═══ HISTORIAL ═══════════════════════════════════════
 
-function saveToHistory(pair, buyP, sellP, capital, profit, percent) {
-  calcHistory.unshift({
-    pair, buyPlatform: pName(buyP), sellPlatform: pName(sellP),
-    capital, profit, percent, timestamp: Date.now()
-  });
-  calcHistory = calcHistory.slice(0, 50);
+function saveToHistory(buyP, sellP, capital, profit, percent) {
+  calcHistory.unshift({ buyP: pName(buyP), sellP: pName(sellP), capital, profit, percent, ts: Date.now() });
+  calcHistory = calcHistory.slice(0, 30);
   localStorage.setItem('arb_calc_history', JSON.stringify(calcHistory));
   renderHistory();
 }
 
 function renderHistory() {
-  const section = document.getElementById('historySection');
+  const sec = document.getElementById('historySection');
   const list = document.getElementById('historyList');
-  if (calcHistory.length === 0) { section.style.display = 'none'; return; }
-
-  section.style.display = 'block';
+  if (!calcHistory.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
   list.innerHTML = calcHistory.map(h => {
-    const isPos = h.profit >= 0;
-    const date = new Date(h.timestamp).toLocaleString('es-AR', {
-      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-    });
-    return `
-      <div class="hist-card">
-        <div class="hist-header">
-          <span class="hist-pair">${h.pair} · $${h.capital.toLocaleString('es-AR', {maximumFractionDigits:0})}</span>
-          <span class="hist-profit ${isPos ? 'color-green' : 'color-red'}">
-            ${isPos ? '+' : ''}$${Math.abs(h.profit).toLocaleString('es-AR', {maximumFractionDigits:0})}
-          </span>
-        </div>
-        <div class="hist-detail">
-          ${h.buyPlatform} → ${h.sellPlatform} · ${date} · ${isPos ? '+' : ''}${h.percent.toFixed(2)}%
-        </div>
-      </div>`;
+    const p = h.profit >= 0;
+    const date = new Date(h.ts).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    return `<div class="hist-card">
+      <div class="hist-header">
+        <span class="hist-pair">${h.buyP} → ${h.sellP}</span>
+        <span class="hist-profit ${p ? 'color-green' : 'color-red'}">${p ? '+' : '-'}$${fmt(Math.abs(h.profit))}</span>
+      </div>
+      <div class="hist-detail">$${fmt(h.capital)} · ${date} · ${p ? '+' : ''}${h.percent.toFixed(2)}%</div>
+    </div>`;
   }).join('');
 }
 
@@ -309,15 +277,5 @@ function clearHist() {
 
 // ═══ HELPERS ═════════════════════════════════════════
 
-function pName(id) {
-  const names = {
-    binance_p2p: 'Binance P2P', binance_spot: 'Binance Spot',
-    okx_p2p: 'OKX P2P', okx_spot: 'OKX Spot',
-    bybit_p2p: 'Bybit P2P', kucoin_p2p: 'KuCoin P2P',
-    bitget_p2p: 'Bitget P2P',
-    lemon: 'Lemon Cash', belo: 'Belo', buenbit: 'Buenbit',
-    ripio: 'Ripio', fiwind: 'Fiwind', tiendacrypto: 'TiendaCrypto',
-    otro: 'Otro'
-  };
-  return names[id] || id;
-}
+function pName(id) { return PLATFORM_FEES[id]?.name || id; }
+function fmt(n) { return Math.round(n).toLocaleString('es-AR'); }
