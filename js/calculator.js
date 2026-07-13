@@ -7,17 +7,17 @@
 // Fuente: paginas oficiales de cada exchange (julio 2024)
 
 const PLATFORM_FEES = {
-  binance_p2p:   { name: 'Binance P2P',   maker: 0, taker: 0, spread: 0.3, note: 'Sin comision maker/taker, spread ~0.3%' },
-  okx_p2p:       { name: 'OKX P2P',       maker: 0, taker: 0, spread: 0.3, note: 'Sin comision, spread ~0.3%' },
-  bybit_p2p:     { name: 'Bybit P2P',     maker: 0, taker: 0, spread: 0.4, note: 'Sin comision, spread ~0.4%' },
-  kucoin_p2p:    { name: 'KuCoin P2P',    maker: 0, taker: 0, spread: 0.5, note: 'Sin comision, spread ~0.5%' },
-  bitget_p2p:    { name: 'Bitget P2P',    maker: 0, taker: 0, spread: 0.4, note: 'Sin comision, spread ~0.4%' },
-  lemon:         { name: 'Lemon Cash',    maker: 0, taker: 0, spread: 1.5, note: 'Spread incluido en precio ~1.5%' },
-  belo:          { name: 'Belo',          maker: 0, taker: 0, spread: 1.2, note: 'Spread incluido ~1.2%' },
-  buenbit:       { name: 'Buenbit',       maker: 0.5, taker: 0.5, spread: 0.8, note: '0.5% comision + spread ~0.8%' },
-  ripio:         { name: 'Ripio',         maker: 0, taker: 0, spread: 2.0, note: 'Spread incluido ~2%' },
-  fiwind:        { name: 'Fiwind',        maker: 0, taker: 0, spread: 0.8, note: 'Spread ~0.8%' },
-  tiendacrypto:  { name: 'TiendaCrypto',  maker: 0, taker: 0.6, spread: 0.5, note: '0.6% + spread ~0.5%' },
+  binance_p2p:   { name: 'Binance P2P',   fee: 0,    note: 'Maker: 0% comision' },
+  okx_p2p:       { name: 'OKX P2P',       fee: 0,    note: 'Maker: 0% comision' },
+  bybit_p2p:     { name: 'Bybit P2P',     fee: 0,    note: 'Maker: 0% comision' },
+  kucoin_p2p:    { name: 'KuCoin P2P',    fee: 0,    note: 'Maker: 0% comision' },
+  bitget_p2p:    { name: 'Bitget P2P',    fee: 0,    note: 'Maker: 0% comision' },
+  lemon:         { name: 'Lemon Cash',    fee: 0,    note: 'Maker: 0% (spread en precio)' },
+  belo:          { name: 'Belo',          fee: 0,    note: 'Maker: 0%' },
+  buenbit:       { name: 'Buenbit',       fee: 0.5,  note: 'Maker: 0.5%' },
+  ripio:         { name: 'Ripio',         fee: 0,    note: 'Maker: 0%' },
+  fiwind:        { name: 'Fiwind',        fee: 0,    note: 'Maker: 0%' },
+  tiendacrypto:  { name: 'TiendaCrypto',  fee: 0.6,  note: 'Maker: 0.6%' },
 };
 
 // Fees de retiro por red (en USDT equivalente)
@@ -63,8 +63,7 @@ function showFeeInfo(selectId, infoId) {
   const fees = PLATFORM_FEES[platform];
   if (!fees) { el.innerHTML = ''; return; }
 
-  const totalFee = fees.maker + fees.taker + fees.spread;
-  el.innerHTML = `<span class="fee-tag">${totalFee.toFixed(1)}% total</span> ${fees.note}`;
+  el.innerHTML = `<span class="fee-tag">${fees.fee}%</span> ${fees.note}`;
 }
 
 function onNetworkChange() {
@@ -75,10 +74,10 @@ function onNetworkChange() {
   }
 }
 
-function getPlatformTotalFee(platformId) {
+function getPlatformFee(platformId) {
   const p = PLATFORM_FEES[platformId];
   if (!p) return 0;
-  return p.maker + p.taker + p.spread;
+  return p.fee;
 }
 
 // ═══ CALCULO ═════════════════════════════════════════
@@ -100,10 +99,10 @@ function calculate() {
     return;
   }
 
-  // Fees automaticas
-  const buyFeeTotal = getPlatformTotalFee(buyPlatform);
-  const sellFeeTotal = getPlatformTotalFee(sellPlatform);
-  const rebuyFeeTotal = getPlatformTotalFee(rebuyPlatform);
+  // Fees automaticas (solo maker)
+  const buyFeeTotal = getPlatformFee(buyPlatform);
+  const sellFeeTotal = getPlatformFee(sellPlatform);
+  const rebuyFeeTotal = getPlatformFee(rebuyPlatform);
 
   // ═══ PASO 1: COMPRA ═══
   const buyFeeCost = capital * (buyFeeTotal / 100);
