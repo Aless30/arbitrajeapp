@@ -392,6 +392,29 @@ body {
   margin-top: 12px;
 }
 
+/* ═══ P2P FEES ═══ */
+
+.p2p-fees-section {
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.p2p-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.p2p-fees-section .input-row {
+  margin-bottom: 0;
+}
+
 /* ═══ RESPONSIVE ═══ */
 
 @media (max-width: 380px) {
