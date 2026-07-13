@@ -6,138 +6,191 @@
   <meta name="theme-color" content="#0A0A0F">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Detector de arbitraje crypto y forex en tiempo real">
-  <title>Arbitraje Detector</title>
+  <meta name="description" content="Calculadora de arbitraje crypto - circuito completo">
+  <title>Calculadora de Arbitraje</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.svg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div id="app">
+
     <!-- Header -->
     <header class="header">
-      <div class="header-left">
-        <h1 class="logo">Arbitraje</h1>
-        <span class="logo-accent">Detector</span>
-      </div>
-      <div class="status-pill" id="statusPill">
-        <span class="pulse-dot" id="pulseDot"></span>
-        <span id="statusText">Inactivo</span>
-      </div>
+      <h1 class="logo">Calculadora<span class="logo-accent">Arbitraje</span></h1>
     </header>
 
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <span class="stat-value" id="statScans">0</span>
-        <span class="stat-label">Escaneos</span>
+    <!-- PASO 1: Capital inicial -->
+    <section class="section">
+      <h2 class="section-title">Capital Inicial</h2>
+      <div class="input-row">
+        <div class="input-group full">
+          <label>Monto a invertir (USD)</label>
+          <input type="number" id="capital" value="1000" min="0" step="1" inputmode="decimal">
+        </div>
       </div>
-      <div class="stat-card">
-        <span class="stat-value stat-green" id="statProfitable">0</span>
-        <span class="stat-label">Rentables</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value stat-blue" id="statBestScore">0</span>
-        <span class="stat-label">Mejor Score</span>
-      </div>
-    </div>
-
-    <!-- Control -->
-    <button class="control-btn" id="controlBtn" onclick="toggleScanning()">
-      ▶ Iniciar Monitoreo
-    </button>
-
-    <!-- Tabs -->
-    <nav class="tabs">
-      <button class="tab active" data-tab="opportunities" onclick="switchTab('opportunities')">Oportunidades</button>
-      <button class="tab" data-tab="history" onclick="switchTab('history')">Historial</button>
-      <button class="tab" data-tab="settings" onclick="switchTab('settings')">Config</button>
-    </nav>
-
-    <!-- Opportunities Tab -->
-    <section class="tab-content active" id="tab-opportunities">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">🔍</div>
-        <p class="empty-text">Buscando oportunidades...</p>
-        <p class="empty-subtext">Las mejores aparecen en momentos de alta volatilidad</p>
-      </div>
-      <div id="opportunitiesList"></div>
     </section>
 
-    <!-- History Tab -->
-    <section class="tab-content" id="tab-history">
-      <div class="empty-state" id="historyEmpty">
-        <div class="empty-icon">📋</div>
-        <p class="empty-text">Sin historial aun</p>
-        <p class="empty-subtext">Las oportunidades rentables se guardaran aqui</p>
+    <!-- PASO 2: Compra -->
+    <section class="section">
+      <h2 class="section-title">1. Compra</h2>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Plataforma</label>
+          <select id="buyPlatform">
+            <option value="binance">Binance</option>
+            <option value="bybit">Bybit</option>
+            <option value="kucoin">KuCoin</option>
+            <option value="kraken">Kraken</option>
+            <option value="gate">Gate.io</option>
+            <option value="okx">OKX</option>
+            <option value="mexc">MEXC</option>
+            <option value="bitget">Bitget</option>
+            <option value="coinbase">Coinbase</option>
+            <option value="p2p">P2P / OTC</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="input-group flex1">
+          <label>Crypto / Par</label>
+          <input type="text" id="buyPair" value="BTC/USDT" placeholder="BTC/USDT">
+        </div>
       </div>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Precio de compra (USD)</label>
+          <input type="number" id="buyPrice" placeholder="67000" min="0" step="any" inputmode="decimal">
+        </div>
+        <div class="input-group flex1">
+          <label>Comision compra (%)</label>
+          <input type="number" id="buyFee" value="0.1" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+    </section>
+
+    <!-- PASO 3: Transferencia -->
+    <section class="section">
+      <h2 class="section-title">2. Transferencia</h2>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Fee de retiro (USD)</label>
+          <input type="number" id="withdrawFee" value="1" min="0" step="0.01" inputmode="decimal">
+        </div>
+        <div class="input-group flex1">
+          <label>Fee de deposito (USD)</label>
+          <input type="number" id="depositFee" value="0" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+    </section>
+
+    <!-- PASO 4: Venta -->
+    <section class="section">
+      <h2 class="section-title">3. Venta</h2>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Plataforma</label>
+          <select id="sellPlatform">
+            <option value="binance">Binance</option>
+            <option value="bybit" selected>Bybit</option>
+            <option value="kucoin">KuCoin</option>
+            <option value="kraken">Kraken</option>
+            <option value="gate">Gate.io</option>
+            <option value="okx">OKX</option>
+            <option value="mexc">MEXC</option>
+            <option value="bitget">Bitget</option>
+            <option value="coinbase">Coinbase</option>
+            <option value="p2p">P2P / OTC</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="input-group flex1">
+          <label>Precio de venta (USD)</label>
+          <input type="number" id="sellPrice" placeholder="67350" min="0" step="any" inputmode="decimal">
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="input-group flex1">
+          <label>Comision venta (%)</label>
+          <input type="number" id="sellFee" value="0.1" min="0" step="0.01" inputmode="decimal">
+        </div>
+      </div>
+    </section>
+
+    <!-- PASO 5: Recompra (circuito completo) -->
+    <section class="section">
+      <h2 class="section-title">4. Recompra (volver al activo)</h2>
+      <div class="toggle-row">
+        <label class="toggle-label">Incluir recompra en el calculo</label>
+        <label class="switch">
+          <input type="checkbox" id="includeRebuy" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="rebuySection">
+        <div class="input-row">
+          <div class="input-group flex1">
+            <label>Plataforma recompra</label>
+            <select id="rebuyPlatform">
+              <option value="binance" selected>Binance</option>
+              <option value="bybit">Bybit</option>
+              <option value="kucoin">KuCoin</option>
+              <option value="kraken">Kraken</option>
+              <option value="gate">Gate.io</option>
+              <option value="okx">OKX</option>
+              <option value="mexc">MEXC</option>
+              <option value="bitget">Bitget</option>
+              <option value="coinbase">Coinbase</option>
+              <option value="p2p">P2P / OTC</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="input-group flex1">
+            <label>Precio recompra (USD)</label>
+            <input type="number" id="rebuyPrice" placeholder="67000" min="0" step="any" inputmode="decimal">
+          </div>
+        </div>
+        <div class="input-row">
+          <div class="input-group flex1">
+            <label>Comision recompra (%)</label>
+            <input type="number" id="rebuyFee" value="0.1" min="0" step="0.01" inputmode="decimal">
+          </div>
+          <div class="input-group flex1">
+            <label>Fee retorno (USD)</label>
+            <input type="number" id="returnFee" value="1" min="0" step="0.01" inputmode="decimal">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Boton calcular -->
+    <button class="calc-btn" onclick="calculate()">Calcular Arbitraje</button>
+
+    <!-- Resultados -->
+    <section class="results-section" id="resultsSection" style="display:none;">
+      <h2 class="section-title">Resultado</h2>
+
+      <!-- Resumen rapido -->
+      <div class="result-summary" id="resultSummary">
+        <div class="result-main" id="resultMain"></div>
+        <div class="result-percent" id="resultPercent"></div>
+      </div>
+
+      <!-- Circuito visual -->
+      <div class="circuit" id="circuit"></div>
+
+      <!-- Desglose detallado -->
+      <div class="breakdown" id="breakdown"></div>
+    </section>
+
+    <!-- Historial -->
+    <section class="section" id="historySection" style="display:none;">
+      <h2 class="section-title">Historial de Calculos</h2>
       <div id="historyList"></div>
+      <button class="clear-btn" onclick="clearHist()">Borrar Historial</button>
     </section>
 
-    <!-- Settings Tab -->
-    <section class="tab-content" id="tab-settings">
-      <div class="settings-section">
-        <h3 class="section-title">Simulacion</h3>
-        <div class="input-group">
-          <label>Monto de inversion (USD)</label>
-          <input type="number" id="cfgInvestment" value="1000">
-        </div>
-      </div>
-      <div class="settings-section">
-        <h3 class="section-title">Umbrales</h3>
-        <div class="input-group">
-          <label>Min. profit inter-exchange (%)</label>
-          <input type="number" id="cfgMinProfit" value="0.3" step="0.1">
-        </div>
-        <div class="input-group">
-          <label>Min. profit triangular (%)</label>
-          <input type="number" id="cfgMinTriangular" value="0.2" step="0.1">
-        </div>
-      </div>
-      <div class="settings-section">
-        <h3 class="section-title">Costos Estimados</h3>
-        <div class="input-group">
-          <label>Fee de trading (%)</label>
-          <input type="number" id="cfgTradingFee" value="0.1" step="0.01">
-        </div>
-        <div class="input-group">
-          <label>Slippage (%)</label>
-          <input type="number" id="cfgSlippage" value="0.05" step="0.01">
-        </div>
-      </div>
-      <div class="settings-section">
-        <h3 class="section-title">Escaneo</h3>
-        <div class="input-group">
-          <label>Intervalo entre escaneos (segundos)</label>
-          <input type="number" id="cfgInterval" value="15">
-        </div>
-      </div>
-      <div class="settings-section">
-        <h3 class="section-title">Exchanges activos</h3>
-        <div class="checkbox-group">
-          <label><input type="checkbox" value="binance" checked> Binance</label>
-          <label><input type="checkbox" value="kraken" checked> Kraken</label>
-          <label><input type="checkbox" value="bybit" checked> Bybit</label>
-          <label><input type="checkbox" value="kucoin" checked> KuCoin</label>
-          <label><input type="checkbox" value="gate" checked> Gate.io</label>
-          <label><input type="checkbox" value="okx"> OKX</label>
-          <label><input type="checkbox" value="mexc"> MEXC</label>
-        </div>
-      </div>
-      <button class="save-btn" onclick="saveSettings()">Guardar Cambios</button>
-      <button class="clear-btn" onclick="clearHistory()">Borrar Historial</button>
-    </section>
   </div>
 
-  <!-- Detail Modal -->
-  <div class="modal" id="detailModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="closeModal()">← Volver</button>
-      <div id="modalBody"></div>
-    </div>
-  </div>
-
-  <script src="js/engine.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/calculator.js"></script>
 </body>
 </html>
